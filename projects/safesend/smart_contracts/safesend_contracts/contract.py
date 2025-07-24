@@ -1,8 +1,5 @@
-from algopy import ARC4Contract, String
-from algopy.arc4 import abimethod
+from beaker import Application
+from pyteal import *
 
-
-class SafesendContracts(ARC4Contract):
-    @abimethod()
-    def hello(self, name: String) -> String:
-        return "Hello, " + name
+class SafeSendApp(Application):
+    pass
