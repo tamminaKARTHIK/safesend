@@ -46,3 +46,8 @@ def safe_transfer(
         InnerTxnBuilder.Submit(),
         output.set("Transfer successful"),
     )
+# Decorator to restrict access to the owner only
+def only_owner(method):
+    return method.authorize(
+        lambda: Txn.sender() == app.state.owner
+    )
