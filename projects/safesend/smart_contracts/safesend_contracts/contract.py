@@ -1,39 +1,29 @@
-from beaker import sandbox, client
-from import SafeSendApp
-
-# Initialize app
-app = SafeSendApp()
-
-# Use sandbox for deployment
-accts = sandbox.get_accounts()
-acct = accts[0]
-
-app_client = client.ApplicationClient(
-    client=sandbox.get_algod_client(),
-    app=app,
-    signer=acct.signer,
-)
-
-# Deploy the contract
-app_id, app_addr, txid = app_client.create()
-print(f"Deployed SafeSend app ID: {app_id}")
-print(f"App Address: {app_addr}")
-
 from beaker import Application, ApplicationStateValue
-from pyteal import abi, Txn, Global, If, Assert, Expr, InnerTxnBuilder, InnerTxn, TxnType
+from pyteal import abi, Txn, Global, Int, Assert, Seq, InnerTxnBuilder, TxnField, TxnType
 
 class SafeSendState:
     owner = ApplicationStateValue(stack_type=abi.Address, descr="Owner of the SafeSend contract")
+    whitelisted_receiver = ApplicationStateValue(stack_type=abi.Address, descr="Allowed address to receive funds")
 
 app = Application("SafeSend", state=SafeSendState())
 
 @app.create
 def create_app(owner: abi.Address):
-    return app.state.owner.set(owner)
+    return Seq(
+        app.state.owner.set(owner),
+        app.state.whitelisted_receiver.set(owner)  # default to owner
+    )
 
 @app.external
 def get_owner(*, output: abi.Address):
     return output.set(app.state.owner)
+
+@app.external
+def update_whitelist(new_receiver: abi.Address):
+    return Seq(
+        Assert(Txn.sender() == app.state.owner, comment="Only owner can update whitelist"),
+        app.state.whitelisted_receiver.set(new_receiver)
+    )
 
 @app.external
 def safe_transfer(
@@ -42,15 +32,11 @@ def safe_transfer(
     *,
     output: abi.String
 ):
-    MAX_AMOUNT = Int(1_000_000)  # 1 Algo = 1,000,000 microAlgos
+    MAX_AMOUNT = Int(1_000_000)  # 1 Algo
 
-    # Replace this with actual whitelisting logic later
-    whitelist_address = Global.creator_address()
-
-    # Validate receiver and amount
     return Seq(
-        Assert(amount.get() <= MAX_AMOUNT, comment="Amount exceeds allowed limit"),
-        Assert(receiver.get() == whitelist_address, comment="Receiver not whitelisted"),
+        Assert(amount.get() <= MAX_AMOUNT, comment="Amount exceeds limit"),
+        Assert(receiver.get() == app.state.whitelisted_receiver, comment="Receiver not allowed"),
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields({
             TxnField.type_enum: TxnType.Payment,
