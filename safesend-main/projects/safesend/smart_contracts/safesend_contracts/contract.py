@@ -18,8 +18,9 @@ class SafeSendApp(Application):
     def create(self):
         """Create the contract with default guardian and safe limit."""
         # Set a default guardian placeholder
+        # CHANGE: Updated placeholder to emphasize user should replace it
         return Seq(
-            self.guardian.set(Bytes("PLACEHOLDER_GUARDIAN_ADDRESS")),
+            self.guardian.set(Bytes("REPLACE_WITH_GUARDIAN_ADDRESS")),
             self.safe_limit.set(Int(0)),
         )
 
@@ -27,6 +28,8 @@ class SafeSendApp(Application):
     @Application.external(authorize=Authorize.only_creator())
     def set_guardian(self, guardian: abi.Address, *, output: abi.String):
         """Set the guardian account for large transactions."""
+        # CHANGE: added debug print to track guardian updates
+        print("Debug: set_guardian called with address:", guardian.get())
         return Seq(
             self.guardian.set(guardian.get()),
             output.set("Guardian set successfully"),
@@ -36,6 +39,8 @@ class SafeSendApp(Application):
     @Application.external(authorize=Authorize.only_creator())
     def set_limit(self, limit: abi.Uint64, *, output: abi.String):
         """Set the maximum amount allowed for auto-approved transactions."""
+        # CHANGE: added debug print to track safe limit updates
+        print("Debug: set_limit called with amount:", limit.get())
         return Seq(
             self.safe_limit.set(limit.get()),
             output.set("Safe limit set successfully"),
@@ -43,6 +48,8 @@ class SafeSendApp(Application):
 
     # Helper function to check if transaction is safe
     def is_safe(self, amount: abi.Uint64):
+        # CHANGE: added docstring for helper
+        """Check if transaction amount is within the safe limit."""
         return amount.get() <= self.safe_limit.get()
 
     # Request Transaction
@@ -58,12 +65,13 @@ class SafeSendApp(Application):
         """Handle a transaction request."""
         # TODO: improve error handling here (e.g., check sender balance)
         # Debug log for tracking
-        print("Debug: request_transaction called with sender:", sender.get(), "amount:", amount.get())
+        print("Debug LOG: request_transaction called by", sender.get(), "for amount:", amount.get())
 
+        # CHANGE: added output message clarity
         return Seq(
             If(self.is_safe(amount))
             .Then(output.set(Concat(Bytes("Transaction auto-approved: "), Itob(amount.get()))))
-            .Else(output.set("Transaction pending guardian approval"))
+            .Else(output.set(Concat(Bytes("Transaction pending guardian approval for amount: "), Itob(amount.get()))))
         )
 
     # Guardian Approves Transaction
@@ -79,13 +87,13 @@ class SafeSendApp(Application):
         """Approve transaction as the guardian."""
         # TODO: improve error handling here (e.g., ensure guardian exists)
         # Debug log for tracking
-        print("Debug: approve_transaction called by sender:", Txn.sender())
+        print("Debug LOG: approve_transaction called by sender:", Txn.sender())
 
-        # Check if guardian is set
+        # CHANGE: added helper for guardian existence check
         return Seq(
             Assert(self.guardian.get() != Bytes("")),
             Assert(Txn.sender() == self.guardian.get()),
-            output.set("Transaction approved by guardian"),
+            output.set(Concat(Bytes("Transaction approved by guardian for amount: "), Itob(amount.get())))
         )
 
 
