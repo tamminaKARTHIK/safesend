@@ -47,6 +47,7 @@ class SafeSendApp(Application):
         *,
         output: abi.String,
     ):
+        # TODO: improve error handling here (e.g., check sender balance)
         return Seq(
             If(amount.get() <= self.safe_limit.get())
             .Then(output.set("Transaction auto-approved"))
@@ -65,6 +66,7 @@ class SafeSendApp(Application):
         *,
         output: abi.String,
     ):
+        # TODO: improve error handling here (e.g., ensure guardian exists)
         return Seq(
             Assert(Txn.sender() == self.guardian.get()),
             output.set("Transaction approved by guardian"),
