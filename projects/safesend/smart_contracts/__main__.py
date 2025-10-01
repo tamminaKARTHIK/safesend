@@ -99,15 +99,14 @@ def build(output_dir: Path, contract_path: Path) -> Path:
 
     build_result = subprocess.run(
         [
-            "algokit",
-            "--no-color",
-            "compile",
-            "python",
+            "puyapy",
             str(contract_path.resolve()),
             f"--out-dir={output_dir}",
             "--no-output-arc32",
             "--output-arc56",
             "--output-source-map",
+            "--log-level",
+            "critical",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

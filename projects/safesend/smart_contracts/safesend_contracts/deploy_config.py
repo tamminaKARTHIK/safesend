@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 # define deployment behaviour based on supplied app spec
 def deploy() -> None:
     from smart_contracts.artifacts.safesend_contracts.safesend_contracts_client import (
-        HelloArgs,
         SafesendContractsFactory,
     )
 
@@ -22,6 +21,7 @@ def deploy() -> None:
     app_client, result = factory.deploy(
         on_update=algokit_utils.OnUpdate.AppendApp,
         on_schema_break=algokit_utils.OnSchemaBreak.AppendApp,
+        args=[deployer_.address],  # owner address for create_app
     )
 
     if result.operation_performed in [
@@ -36,9 +36,9 @@ def deploy() -> None:
             )
         )
 
-    name = "world"
-    response = app_client.send.hello(args=HelloArgs(name=name))
+    # Call get_owner to verify
+    response = app_client.send.get_owner()
     logger.info(
-        f"Called hello on {app_client.app_name} ({app_client.app_id}) "
-        f"with name={name}, received: {response.abi_return}"
+        f"Called get_owner on {app_client.app_name} ({app_client.app_id}) "
+        f"received: {response.abi_return}"
     )
